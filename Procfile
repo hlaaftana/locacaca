@@ -1,1 +1,1 @@
-web: ./locacaca
+worker: ./locacaca
