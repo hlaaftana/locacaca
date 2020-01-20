@@ -1,6 +1,6 @@
 import cmd, discord/[discord, arguments, http, messages, ws]
 
-import strutils, json, asyncdispatch, httpclient, times, uri, tables, random, os, macros
+import strutils, json, asyncdispatch, asyncnet, httpclient, times, uri, tables, random, os, macros
 
 proc evalNim(code: string): tuple[compileLog, log: string] {.used.} =
   let http = newAsyncHttpClient()
