@@ -375,7 +375,7 @@ type OurDispatcher = object
 proc spam() {.async.} =
   while not instance.ws.sock.isClosed:
     await sleepAsync(2000)
-    instance.http.sendMessage("668846634326556672", "hello now at " & $now())
+    discard await(instance.http.sendMessage("668846634326556672", "hello now at " & $now()))
 
 proc dispatch(dispatcher: OurDispatcher, event: string, node: JsonNode) {.gcsafe.} =
   case event
