@@ -58,194 +58,195 @@ cmd "say":
   info "copies you"
   asyncCheck respond(args)
 
-cmd "save":
-  info """lets you save snippets of text
-usage:
-`save set name text  -- saves text to name. note that you can use $1 to replace text,
-                  -- so to append you could do "save set name $1 newtext"
-save get name       -- gets text of name
-save get name ID    -- gets text of name from saves of person with ID, ID can also be "anyone" or "me"
-save delete name    -- deletes text from name
-save list           -- lists your saves
-save list ID        -- lists saves of person with ID, can also be anyone or me`"""
+when false:
+  cmd "save":
+    info """lets you save snippets of text
+            usage:
+            `save set name text  -- saves text to name. note that you can use $1 to replace text,
+                              -- so to append you could do "save set name $1 newtext"
+            save get name       -- gets text of name
+            save get name ID    -- gets text of name from saves of person with ID, ID can also be "anyone" or "me"
+            save delete name    -- deletes text from name
+            save list           -- lists your saves
+            save list ID        -- lists saves of person with ID, can also be anyone or me`""".unindent
 
-  var a = newArguments(args)
-  let arg = a.next
-  case arg
-  of "get":
-    let name = escapeJson(a.next)[1..^2]
-    var by: string
-    case a.rest
-    of "", "me":
-      by = JsonNode(message)["author"]["id"].getStr
-    of "anyone":
-      by = ""
-    elif a.rest.allCharsInSet({'0'..'9'}):
-      by = a.rest
-    else:
-      asyncCheck respond("the second argument is supposed to be an ID, " &
-        "you must have put in a space by accident. to keep the spaces, put the name of the save in quotes")
-      return
-    var file = open("data/saved")
-    var ourId = false
-    for line in file.lines:
-      case line[0]
-      of '0'..'9':
-        ourId = by == "" or line == by
-      of '|':
-        if ourId:
-          var escaped = false
-          var recorded = ""
-          for i in 1..line.high:
-            let ch = line[i]
-            if not escaped and ch == '"':
-              if recorded == name:
-                asyncCheck respond(name & ": " & parseJson(line[i..^1]).getStr)
-                file.close()
-                return
-              else: break
-            recorded.add(ch)
-            escaped = not escaped and ch == '\\'
+    var a = newArguments(args)
+    let arg = a.next
+    case arg
+    of "get":
+      let name = escapeJson(a.next)[1..^2]
+      var by: string
+      case a.rest
+      of "", "me":
+        by = JsonNode(message)["author"]["id"].getStr
+      of "anyone":
+        by = ""
+      elif a.rest.allCharsInSet({'0'..'9'}):
+        by = a.rest
       else:
-        discard
-    file.close()
-    asyncCheck respond("couldnt find " & name)
-  of "set":
-    let name = escapeJson(a.next)[1..^2]
-    let val = a.rest
-    var str = ""
-    let ourId = JsonNode(message)["author"]["id"].getStr
-    var isOurId = false
-    var done = false
-    for line in "data/saved".lines:
-      if done:
-        str.add(line)
-        str.add("\n")
-      else:
+        asyncCheck respond("the second argument is supposed to be an ID, " &
+          "you must have put in a space by accident. to keep the spaces, put the name of the save in quotes")
+        return
+      var file = open("data/saved")
+      var ourId = false
+      for line in file.lines:
         case line[0]
         of '0'..'9':
-          if isOurId:
-            str.add("|" & name & $(%val) & "\n")
-            str.add("\n")
-            done = true
-          else:
-            isOurId = line == ourId
-          str.add(line)
-          str.add("\n")
+          ourId = by == "" or line == by
         of '|':
-          var
-            i = 1
-            n = ""
-            escaped = false
-          while i < line.len:
-            let ch = line[i]
-            if not escaped and ch == '"':
-              break
-            else:
-              n.add(ch)
-            escaped = not escaped and ch == '\\'
-            inc i
-          if name == n:
-            str.add("|" & name & $(%(val % parseJson(line[i .. ^1]).getStr)) & "\n")
-            done = true
-          else:
-            str.add(line)
-          str.add("\n")
-        elif not line.allCharsInSet(Whitespace):
-          str.add(line.strip)
-          str.add("\n")
-    if not done:
-      if not isOurId:
-        str.add(ourId)
-        str.add("\n")
-      str.add("|" & name & $(%val) & "\n")
-      str.add("\n")
-    writeFile("data/saved", str)
-    asyncCheck respond("saved to " & name)
-  of "delete":
-    let name = escapeJson(a.next)[1..^2]
-    var str = ""
-    let ourId = JsonNode(message)["author"]["id"].getStr
-    var isOurId, successful, done = false
-    for line in "data/saved".lines:
-      if done:
-        str.add(line)
-        str.add("\n")
-      else:
-        case line[0]
-        of '0'..'9':
-          if isOurId:
-            done = true
-          else:
-            isOurId = line == ourId
-          str.add(line)
-          str.add("\n")
-        of '|':
-          var
-            i = 1
-            n = ""
-            escaped = false
-          while i < line.len:
-            let ch = line[i]
-            if not escaped and ch == '"':
-              break
-            else:
-              n.add(ch)
-            escaped = not escaped and ch == '\\'
-            inc i
-          if name != n:
-            str.add(line)
-            str.add("\n")
-          else:
-            successful = true
+          if ourId:
+            var escaped = false
+            var recorded = ""
+            for i in 1..line.high:
+              let ch = line[i]
+              if not escaped and ch == '"':
+                if recorded == name:
+                  asyncCheck respond(name & ": " & parseJson(line[i..^1]).getStr)
+                  file.close()
+                  return
+                else: break
+              recorded.add(ch)
+              escaped = not escaped and ch == '\\'
         else:
+          discard
+      file.close()
+      asyncCheck respond("couldnt find " & name)
+    of "set":
+      let name = escapeJson(a.next)[1..^2]
+      let val = a.rest
+      var str = ""
+      let ourId = JsonNode(message)["author"]["id"].getStr
+      var isOurId = false
+      var done = false
+      for line in "data/saved".lines:
+        if done:
           str.add(line)
           str.add("\n")
-    writeFile("data/saved", str)
-    if successful:
-      asyncCheck respond("deleted " & name)
-    else:
-      asyncCheck respond(name & " didn't exist")
-  of "list":
-    var by: string
-    case a.rest
-    of "", "me":
-      by = JsonNode(message)["author"]["id"].getStr
-    of "anyone":
-      by = ""
-    elif a.rest.allCharsInSet({'0'..'9'}):
-      by = a.rest
-    else:
-      asyncCheck respond("list is supposed to take an ID, " &
-        "you must have put in a name or whatever, i dont like those yet")
-      return
-    var ourId = false
-    var names = newSeq[string]()
-    for line in "data/saved".lines:
-      case line[0]
-      of '0'..'9':
-        ourId = by == "" or line == by
-      of '|':
-        if ourId:
-          var escaped = false
-          var recorded = ""
-          for i in 1..line.high:
-            let ch = line[i]
-            if not escaped and ch == '"':
-              names.add(recorded)
-              break
-            recorded.add(ch)
-            escaped = not escaped and ch == '\\'
+        else:
+          case line[0]
+          of '0'..'9':
+            if isOurId:
+              str.add("|" & name & $(%val) & "\n")
+              str.add("\n")
+              done = true
+            else:
+              isOurId = line == ourId
+            str.add(line)
+            str.add("\n")
+          of '|':
+            var
+              i = 1
+              n = ""
+              escaped = false
+            while i < line.len:
+              let ch = line[i]
+              if not escaped and ch == '"':
+                break
+              else:
+                n.add(ch)
+              escaped = not escaped and ch == '\\'
+              inc i
+            if name == n:
+              str.add("|" & name & $(%(val % parseJson(line[i .. ^1]).getStr)) & "\n")
+              done = true
+            else:
+              str.add(line)
+            str.add("\n")
+          elif not line.allCharsInSet(Whitespace):
+            str.add(line.strip)
+            str.add("\n")
+      if not done:
+        if not isOurId:
+          str.add(ourId)
+          str.add("\n")
+        str.add("|" & name & $(%val) & "\n")
+        str.add("\n")
+      writeFile("data/saved", str)
+      asyncCheck respond("saved to " & name)
+    of "delete":
+      let name = escapeJson(a.next)[1..^2]
+      var str = ""
+      let ourId = JsonNode(message)["author"]["id"].getStr
+      var isOurId, successful, done = false
+      for line in "data/saved".lines:
+        if done:
+          str.add(line)
+          str.add("\n")
+        else:
+          case line[0]
+          of '0'..'9':
+            if isOurId:
+              done = true
+            else:
+              isOurId = line == ourId
+            str.add(line)
+            str.add("\n")
+          of '|':
+            var
+              i = 1
+              n = ""
+              escaped = false
+            while i < line.len:
+              let ch = line[i]
+              if not escaped and ch == '"':
+                break
+              else:
+                n.add(ch)
+              escaped = not escaped and ch == '\\'
+              inc i
+            if name != n:
+              str.add(line)
+              str.add("\n")
+            else:
+              successful = true
+          else:
+            str.add(line)
+            str.add("\n")
+      writeFile("data/saved", str)
+      if successful:
+        asyncCheck respond("deleted " & name)
       else:
-        discard
-    if names.len != 0:
-      asyncCheck respond("got names: " & names.join(", "))
-    elif by != "":
-      asyncCheck respond(by & " had no saves")
+        asyncCheck respond(name & " didn't exist")
+    of "list":
+      var by: string
+      case a.rest
+      of "", "me":
+        by = JsonNode(message)["author"]["id"].getStr
+      of "anyone":
+        by = ""
+      elif a.rest.allCharsInSet({'0'..'9'}):
+        by = a.rest
+      else:
+        asyncCheck respond("list is supposed to take an ID, " &
+          "you must have put in a name or whatever, i dont like those yet")
+        return
+      var ourId = false
+      var names = newSeq[string]()
+      for line in "data/saved".lines:
+        case line[0]
+        of '0'..'9':
+          ourId = by == "" or line == by
+        of '|':
+          if ourId:
+            var escaped = false
+            var recorded = ""
+            for i in 1..line.high:
+              let ch = line[i]
+              if not escaped and ch == '"':
+                names.add(recorded)
+                break
+              recorded.add(ch)
+              escaped = not escaped and ch == '\\'
+        else:
+          discard
+      if names.len != 0:
+        asyncCheck respond("got names: " & names.join(", "))
+      elif by != "":
+        asyncCheck respond(by & " had no saves")
+      else:
+        asyncCheck respond("no one had saves (?)")
     else:
-      asyncCheck respond("no one had saves (?)")
-  else:
-    asyncCheck respond("do v<info save")
+      asyncCheck respond("do v<info save")
 
 cmd "gccollect":
   GC_fullCollect()
@@ -356,10 +357,6 @@ usage:
   else:
     asyncCheck respond("what BA?")
 
-cmd "say2":
-  info "say command version 2"
-  asyncCheck respond(args)
-
 proc filterText(text: string): string =
   result = text.multiReplace({
     "@everyone": "@\u200beveryone",
@@ -375,10 +372,16 @@ var
 
 type OurDispatcher = object
 
+proc spam() {.async.} =
+  while not instance.ws.sock.isClosed:
+    await sleepAsync(2000)
+    instance.http.sendMessage("668846634326556672", "hello now at " & $now())
+
 proc dispatch(dispatcher: OurDispatcher, event: string, node: JsonNode) {.gcsafe.} =
   case event
   of "READY":
     ready = node
+    asyncCheck spam()
   of "MESSAGE_CREATE":
     let msg = MessageEvent(node)
     let cont = msg.content
