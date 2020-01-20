@@ -55,7 +55,7 @@ proc heartbeat*(ws: AsyncWebSocket, lastSeq: int, interval: int) {.async.} =
     await sleepAsync(interval)
 
 when defined(discordetf):
-  proc process*[T: Dispatcher](dispatcher: T, ws: AsyncWebSocket, token: string, lastSeq: ref int, data: Term) =
+  proc process*[T](dispatcher: T, ws: AsyncWebSocket, token: string, lastSeq: ref int, data: Term) =
     echo data
 
 proc process*[T: Dispatcher](dispatcher: T, ws: AsyncWebSocket, token: string, lastSeq: ref int, data: JsonNode) =

@@ -1,6 +1,6 @@
 import cmd, discord/[discord, arguments, http, messages, ws]
 
-import strutils, json, asyncdispatch, httpclient, times, uri, tables, random, os
+import strutils, json, asyncdispatch, httpclient, times, uri, tables, random, os, macros
 
 proc evalNim(code: string): tuple[compileLog, log: string] {.used.} =
   let http = newAsyncHttpClient()
@@ -45,7 +45,7 @@ normally id go with something like "poo " but itd come out of nowhere if someone
 source code at https://github.com/hlaaftana/pkpsgpsg
 nim version is """ & NimVersion)
   else:
-    for c, i in nameInfoTable:
+    for c, i in nameInfoTable.items:
       if c == args:
         if i.len == 0:
           asyncCheck respond("no info about that command")
@@ -282,7 +282,7 @@ cmd "nim+":
 cmd "nim":
   info "compiles nim code via the playground, for compile output use nim+"
   typing
-  let (_, log) = evalNim(args)
+  let log = evalNim(args)[1]
   if log.len == 0:
     asyncCheck respond("try again later the nim playground is shaky")
   else:
@@ -368,18 +368,18 @@ proc filterText(text: string): string =
   if result.len >= 1_700:
     result = "text is too big to post"
 
-proc main =
-  var
-    ready: JsonNode
-    dispatcher: ListenerDispatcher
-    instance: DiscordInstance
+var
+  ready: JsonNode
+  instance: DiscordInstance
+  smashCharLists: Table[string, seq[string]]
 
-  var smashCharLists: Table[string, seq[string]]
+type OurDispatcher = object
 
-  dispatcher.init()
-  dispatcher.addListener("READY") do (node: JsonNode):
+proc dispatch(dispatcher: OurDispatcher, event: string, node: JsonNode) {.gcsafe.} =
+  case event
+  of "READY":
     ready = node
-  dispatcher.addListener("MESSAGE_CREATE") do (node: JsonNode):
+  of "MESSAGE_CREATE":
     let msg = MessageEvent(node)
     let cont = msg.content
     var curr = cont
@@ -388,17 +388,17 @@ proc main =
     if node["author"]["id"] == ready["user"]["id"]:
       return
 
+    template respond(cont: string, tts = false): untyped {.used.} =
+      instance.http.reply(message, filterText(cont), tts)
+    
+    template typing(): untyped {.used.} =
+      instance.http.sendTyping(message.channelId)
+
     # prefixes
     if curr.startsWith("v<"):
       curr.removePrefix("v<")
     else:
       return
-
-    template respond(cont: string, tts = false): untyped {.used.} =
-      instance.http.reply(message, filterText(cont), tts)
-
-    template typing() {.used.} =
-      instance.http.typing(message.channelId)
 
     var arg = curr
 
@@ -413,7 +413,9 @@ proc main =
           return
         arg = curr
 
-  init(dispatcher, getEnv("DISCORD_TOKEN", parseFile("bot.json")["config"].getStr), instance)
+proc main =
+  let dispatcher = OurDispatcher()
+  init(dispatcher, when defined(home): parseFile("bot.json")["token"].getStr else: getEnv("DISCORD_TOKEN"), instance)
   runForever()
 
 main()

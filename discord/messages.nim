@@ -27,7 +27,7 @@ proc sendFile*(http: AsyncHttpClient, channelId: string, data, filename: string,
 template reply*(http: AsyncHttpClient, msg: MessageEvent, content: string, tts = false): auto =
   http.sendMessage(msg.channelId, content, tts)
 
-proc typing*(http: AsyncHttpClient, channelId: string) =
+proc sendTyping*(http: AsyncHttpClient, channelId: string) =
   discard waitFor(http.request($(api / "channels" / channelId / "typing"), HttpPost,
     when NimMajor <= 18: "{}" else: ""))
 

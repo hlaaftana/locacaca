@@ -8,10 +8,8 @@ var commands* {.compileTime.}: seq[Command]
 
 macro cmd*(name: untyped, body: untyped): untyped =
   let cmd = new(Command)
-  if name.kind in {nnkIdent, nnkStrLit, nnkRStrLit, nnkTripleStrLit}:
-    cmd.name = name.strVal
-  else:
-    error("not a command name", name)
+  expectKind name, {nnkIdent, nnkStrLit, nnkRStrLit, nnkTripleStrLit}
+  cmd.name = name.strVal
   if body.kind == nnkStmtList:
     cmd.node = newStmtList()
     var infoSet = false
@@ -37,35 +35,18 @@ macro commandBody*(name: static[string]): untyped =
   for c in commands:
     if c.name == name: return c.node
 
-proc withPragmas(name: string, pragmas: varargs[string]): NimNode =
-  var prags = newNimNode(nnkPragma)
-  for p in pragmas:
-    prags.add(ident(p))
-  result = newTree(nnkPragmaExpr, ident(name), prags)
-
 macro eachCommand*(message: MessageEvent, content, args: string, body: untyped): untyped =
   result = newStmtList()
   for c in commands:
-    let n = newStmtList()
-    n.add(
-      newTree(nnkConstSection,
-        newTree(nnkConstDef, withPragmas("prefix", "used"), newEmptyNode(), newLit(c.name))))
-    let b = newStmtList(
-      newTree(nnkLetSection,
-        newTree(nnkIdentDefs,
-          withPragmas("message", "inject", "used"),
-          newEmptyNode(),
-          message),
-        newTree(nnkIdentDefs,
-          withPragmas("content", "inject", "used"),
-          newEmptyNode(),
-          content),
-        newTree(nnkIdentDefs,
-          withPragmas("args", "inject", "used"),
-          newEmptyNode(),
-          args)),
-      c.node)
-    n.add(newProc(ident"commandBody", [bindSym"untyped"], b, nnkTemplateDef,
-      newTree(nnkPragma, ident"used")))
-    n.add(body)
-    result.add(newBlockStmt(n))
+    let name = c.name
+    let node = c.node
+    result.add(quote do:
+      block:
+        const prefix {.used, inject.} = `name`
+        template commandBody: untyped {.used.} =
+          let message {.inject, used.} = `message`
+          let content {.inject, used.} = `content`
+          let args {.inject, used.} = `args`
+          `node`
+        `body`)
+  result = newBlockStmt(result)
