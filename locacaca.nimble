@@ -6,4 +6,4 @@ bin           = @["locacaca"]
 
 # Dependencies
 
-requires "nim >= 1.0.4", "websocket@#HEAD"
+requires "nim >= 1.0.4", "websocket#HEAD"
