@@ -1,6 +1,6 @@
 import cmd, discord/[discord, arguments, http, messages, ws]
 
-import strutils, json, asyncdispatch, asyncnet, httpclient, times, uri, tables, random, os, macros
+import strutils, json, asyncdispatch, httpclient, times, uri, tables, random, os, macros
 
 proc evalNim(code: string): tuple[compileLog, log: string] {.used.} =
   let http = newAsyncHttpClient()
@@ -372,16 +372,10 @@ var
 
 type OurDispatcher = object
 
-proc spam() {.async.} =
-  while not instance.ws.sock.isClosed:
-    await sleepAsync(2000)
-    discard await(instance.http.sendMessage("668846634326556672", "hello now at " & $now()))
-
 proc dispatch(dispatcher: OurDispatcher, event: string, node: JsonNode) {.gcsafe.} =
   case event
   of "READY":
     ready = node
-    asyncCheck spam()
   of "MESSAGE_CREATE":
     let msg = MessageEvent(node)
     let cont = msg.content
