@@ -28,8 +28,7 @@ template reply*(http: AsyncHttpClient, msg: MessageEvent, content: string, tts =
   http.sendMessage(msg.channelId, content, tts)
 
 proc sendTyping*(http: AsyncHttpClient, channelId: string) =
-  discard waitFor(http.request($(api / "channels" / channelId / "typing"), HttpPost,
-    when NimMajor <= 18: "{}" else: ""))
+  asyncCheck http.request($(api / "channels" / channelId / "typing"), HttpPost, "")
 
 proc editMessage*(http: AsyncHttpClient, channelId, messageId: string, content: string, tts = false): auto =
   var payload = newJObject()

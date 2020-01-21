@@ -1,46 +1,52 @@
-import messages, strutils
+import macros, messages
 
-type
-  CommandProc*[T] = proc(cachedContent: string, args: string, obj: MessageEvent): T
+type Command* = ref object
+  name*, info*: string
+  node*: NimNode
 
-  Command* = object
-    prefix*, info*: string
-    callback*: CommandProc[void]
+var commands* {.compileTime.}: seq[Command]
 
-  CommandHandler* = object
-    commands*: seq[Command]
-    allowMultiple*: bool
-    prefixes*: seq[string]
-    predicate*: CommandProc[bool]
-    noMatch*: CommandProc[void]
+macro cmd*(name: untyped, body: untyped): untyped =
+  let cmd = new(Command)
+  expectKind name, {nnkIdent, nnkStrLit, nnkRStrLit, nnkTripleStrLit}
+  cmd.name = name.strVal
+  if body.kind == nnkStmtList:
+    cmd.node = newStmtList()
+    var infoSet = false
+    for c in body:
+      if not infoSet and c.kind in {nnkCommand, nnkCall, nnkCallStrLit} and
+        c.len == 2 and c[0].kind == nnkIdent and c[0].strVal == "info" and
+        c[1].kind in {nnkStrLit, nnkRStrLit, nnkTripleStrLit}:
+        cmd.info = c[1].strVal
+        infoSet = true
+      else:
+        cmd.node.add(c)
+  else:
+    cmd.node = body
+  commands.add(cmd)
 
-proc handleCommand*(hndl: CommandHandler, msg: MessageEvent) =
-  var matched: bool
-  let cont = msg.content
-  var curr = cont
-  let hf = hndl.predicate
-  if not hf.isNil and not hf(cont, curr, msg):
-    return
-  var success = false
-  for hp in hndl.prefixes:
-    if curr.startsWith(hp):
-      curr.removePrefix(hp)
-      success = true
-      break
-  if not success:
-    return
-  for cmd in hndl.commands:
-    let p = cmd.prefix
-    if curr.startsWith(p):
-      var args = curr
-      args.removePrefix(p)
-      let ended = args.len == 0
-      if ended or args[0] in Whitespace:
-        matched = true
-        if not ended:
-          args = args.strip(trailing = false)
-        cmd.callback(cont, args, msg)
-        if not hndl.allowMultiple:
-          return
-  if not matched and not hndl.noMatch.isNil:
-    hndl.noMatch(cont, curr, msg)
+macro nameInfoTable*: seq[(string, string)] =
+  var t = newSeq[(string, string)](commands.len)
+  for i in 0..<commands.len:
+    t[i] = (commands[i].name, commands[i].info)
+  result = newLit(t)
+
+macro commandBody*(name: static[string]): untyped =
+  for c in commands:
+    if c.name == name: return c.node
+
+macro eachCommand*(message: MessageEvent, content, args: string, body: untyped): untyped =
+  result = newStmtList()
+  for c in commands:
+    let name = c.name
+    let node = c.node
+    result.add(quote do:
+      block:
+        const prefix {.used, inject.} = `name`
+        template commandBody: untyped {.used.} =
+          let message {.inject, used.} = `message`
+          let content {.inject, used.} = `content`
+          let args {.inject, used.} = `args`
+          `node`
+        `body`)
+  result = newBlockStmt(result)

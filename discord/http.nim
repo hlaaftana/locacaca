@@ -1,4 +1,8 @@
-import httpclient, asyncdispatch, json, uri
+import httpclient, asyncdispatch, json, uri, common
+
+proc newHttp*(headers: HttpHeaders): AsyncHttpClient =
+  result = newAsyncHttpClient(discordUserAgent)
+  result.headers = headers
 
 proc parseResponse*(resp: AsyncResponse): JsonNode =
   result = parseJson(waitFor resp.body)

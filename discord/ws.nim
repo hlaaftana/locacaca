@@ -1,16 +1,12 @@
-when false and not defined(ssl):
-  {.fatal: "SSL not loaded for Discord. Do `nim c -d:ssl`".}
-
 import
   websocket, asyncdispatch, asyncnet, uri, net, common, tables, json
 
-when defined(discordetf):
-  import etf
-
-when defined(discordCompress):
+when compress:
   from zip/zlib import uncompress
 
-when not defined(discordetf):
+when encoding == DiscordEncoding.etf:
+  import etf
+else:
   proc send*(ws: AsyncWebSocket, data: JsonNode) {.async.} =
     await ws.sendText($data)
 
@@ -21,12 +17,12 @@ when not defined(discordetf):
     })
 
 proc identify*(ws: AsyncWebSocket, token: string) {.async.} =
-  when defined(discordetf):
+  when encoding == DiscordEncoding.etf:
     asyncCheck ws.sendText(toBytes(Term(tag: tagMap, map: @[
       (Term(tag: tagAtomUtf8, atom: "op".Atom), Term(tag: tagUint8, u8: 2)),
       (Term(tag: tagAtomUtf8, atom: "d".Atom), Term(tag: tagMap, map: @[
         (Term(tag: tagAtomUtf8, atom: "token".Atom), Term(tag: tagString, str: token)),
-        #(Term(tag: tagAtomUtf8, atom: "compress".Atom), Term(tag: tagUint8, u8: defined(discordCompress).byte)),
+        #(Term(tag: tagAtomUtf8, atom: "compress".Atom), Term(tag: tagUint8, u8: compress.byte)),
         (Term(tag: tagAtomUtf8, atom: "large_threshold".Atom), Term(tag: tagUint8, u8: 250)),
         (Term(tag: tagAtomUtf8, atom: "properties".Atom), Term(tag: tagMap, map: @[
           (Term(tag: tagAtomUtf8, atom: "$os".Atom), Term(tag: tagString, str: hostOS)),
@@ -46,7 +42,7 @@ proc identify*(ws: AsyncWebSocket, token: string) {.async.} =
 
 proc heartbeat*(ws: AsyncWebSocket, lastSeq: int, interval: int) {.async.} =
   while not ws.sock.isClosed:
-    when defined(discordetf):
+    when encoding == DiscordEncoding.etf:
       asyncCheck ws.sendText(toBytes(Term(tag: tagMap, map: @[
         (Term(tag: tagAtomUtf8, atom: "op".Atom), Term(tag: tagUint8, u8: 1)),
         (Term(tag: tagAtomUtf8, atom: "d".Atom), Term(tag: tagInt32, i32: lastSeq.int32))])))
@@ -54,7 +50,7 @@ proc heartbeat*(ws: AsyncWebSocket, lastSeq: int, interval: int) {.async.} =
       asyncCheck ws.send(op = 1, lastSeq)
     await sleepAsync(interval)
 
-when defined(discordetf):
+when encoding == DiscordEncoding.etf:
   proc process*[T](dispatcher: T, ws: AsyncWebSocket, token: string, lastSeq: ref int, data: Term) =
     echo data
 
@@ -77,10 +73,10 @@ proc process*[T: Dispatcher](dispatcher: T, ws: AsyncWebSocket, token: string, l
 proc read*[T: Dispatcher](dispatcher: T, ws: AsyncWebSocket, token: string, lastSeq: ref int) {.async.} =
   while not ws.sock.isClosed:
     let (opcode, data) = await ws.readData()
-    when defined(discordetf): echo data
+    when encoding == DiscordEncoding.etf: echo data
     case opcode
     of Opcode.Text:
-      when defined(discordetf):
+      when encoding == DiscordEncoding.etf:
         if data[0] == 131.char:
           let etf = parseEtf(data)
           echo data
