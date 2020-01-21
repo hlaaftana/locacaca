@@ -62,7 +62,6 @@ proc process*[T: Dispatcher](dispatcher: T, ws: AsyncWebSocket, token: string, l
     let
       d = data["d"]
       t = data["t"].getStr()
-    if t == "READY": echo "readied"
     dispatcher.dispatch(t, d)
   of 10:
     echo "heartbeating & identifying"

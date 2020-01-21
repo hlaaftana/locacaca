@@ -1,6 +1,6 @@
 import discord/[discord, arguments, http, messages, commands]
 
-import strutils, json, asyncdispatch, httpclient, times, uri, tables, random, os, strformat
+import strutils, json, asyncdispatch, httpclient, times, uri, tables, random, os,
 
 cmd "cmds":
   info "lists all commands"
@@ -13,11 +13,11 @@ cmd "cmds":
 cmd "info":
   info "gives info about the bot, or about a command if you ask"
   if args.len == 0:
-    asyncCheck respond(&"""this is claudes bot, you call it by doing v<(command) or vv (command)
+    asyncCheck respond("""this is claudes bot, you call it by doing v<(command) or vv (command)
 for all commands do v<cmds
 source code at https://github.com/hlaaftana/locacaca
-nim version is {NimVersion}
-started {startTime} on """ & (when defined(home): "my computer" else: "heroku"))
+nim version is """ & NimVersion & """
+started """ & $startTime & " on " & (when defined(home): "my computer" else: "heroku"))
   else:
     for c, i in nameInfoTable.items:
       if c == args:
