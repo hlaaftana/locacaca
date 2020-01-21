@@ -1,9 +1,6 @@
-import uri, websocket, tables, json, httpclient
+import uri
 
 type
-  Dispatcher* = concept d
-    d.dispatch(string, JsonNode)
-  
   DiscordEncoding* {.pure.} = enum
     json, etf
 

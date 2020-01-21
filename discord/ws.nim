@@ -54,7 +54,7 @@ when encoding == DiscordEncoding.etf:
   proc process*[T](dispatcher: T, ws: AsyncWebSocket, token: string, lastSeq: ref int, data: Term) =
     echo data
 
-proc process*[T: Dispatcher](dispatcher: T, ws: AsyncWebSocket, token: string, lastSeq: ref int, data: JsonNode) =
+proc process*[T](dispatcher: T, ws: AsyncWebSocket, token: string, lastSeq: ref int, data: JsonNode) =
   let op = data["op"].getInt()
   case op
   of 0:
@@ -69,7 +69,7 @@ proc process*[T: Dispatcher](dispatcher: T, ws: AsyncWebSocket, token: string, l
     asyncCheck identify(ws, token)
   else: discard
 
-proc read*[T: Dispatcher](dispatcher: T, ws: AsyncWebSocket, token: string, lastSeq: ref int) {.async.} =
+proc read*[T](dispatcher: T, ws: AsyncWebSocket, token: string, lastSeq: ref int) {.async.} =
   while not ws.sock.isClosed:
     let (opcode, data) = await ws.readData()
     when encoding == DiscordEncoding.etf: echo data
