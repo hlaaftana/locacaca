@@ -1,6 +1,6 @@
 import discord/[discord, arguments, http, messages, commands]
 
-import strutils, json, asyncdispatch, httpclient, times, uri, tables, random, os,
+import strutils, json, asyncdispatch, httpclient, times, uri, tables, random, os
 
 cmd "cmds":
   info "lists all commands"
